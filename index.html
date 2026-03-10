@@ -123,6 +123,50 @@ input:checked + .sl:before { transform: translateX(19px); }
 .upload-remove { margin-left: auto; background: none; border: none; color: var(--muted); cursor: pointer; font-size: 16px; padding: 0 4px; }
 .upload-remove:hover { color: var(--text); }
 
+/* ── Obs flag ── */
+.obs-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  margin-top: 8px; background: none; border: none;
+  color: var(--muted); font-size: 11px; cursor: pointer;
+  padding: 3px 0; transition: color .15s;
+}
+.obs-btn:hover { color: var(--accent2); }
+.obs-btn .flag { font-size: 12px; }
+.obs-area { display: none; margin-top: 6px; }
+.obs-area.on { display: block; animation: up .2s ease; }
+.obs-area textarea {
+  width: 100%; background: rgba(99,102,241,.06);
+  border: 1px dashed var(--border); border-radius: var(--r);
+  padding: 8px 12px; color: var(--text); font-size: 12px;
+  font-family: inherit; resize: vertical; min-height: 56px; outline: none;
+}
+.obs-area textarea:focus { border-color: var(--accent); }
+
+/* ── Carteira block ── */
+.carteira-block {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 16px; margin-bottom: 12px;
+  position: relative;
+}
+.carteira-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px;
+}
+.carteira-num { font-size: 12px; font-weight: 700; color: var(--accent2); }
+.carteira-remove {
+  background: none; border: none; color: var(--muted);
+  cursor: pointer; font-size: 16px; padding: 0; line-height: 1;
+}
+.carteira-remove:hover { color: #f87171; }
+.btn-add {
+  display: flex; align-items: center; gap: 7px;
+  background: rgba(99,102,241,.1); border: 1px dashed var(--accent);
+  border-radius: var(--r); padding: 9px 16px; color: var(--accent2);
+  font-size: 13px; font-weight: 600; cursor: pointer; width: 100%;
+  justify-content: center; transition: .15s;
+}
+.btn-add:hover { background: rgba(99,102,241,.2); }
+
 /* ── Buttons ── */
 .btns { display: flex; gap: 10px; margin-top: 24px; justify-content: flex-end; }
 .btn-p { background: var(--accent); color: #fff; border: none; border-radius: var(--r); padding: 10px 22px; font-size: 13px; font-weight: 700; cursor: pointer; transition: .15s; }
@@ -246,11 +290,6 @@ input:checked + .sl:before { transform: translateX(19px); }
 
     <div class="cond" id="cond_cedente">
       <div class="f">
-        <label>Nome do credor / cedente</label>
-        <div class="hint">Empresa que originou a dívida e cedeu para cobrança. Ex: Seara Alimentos, Claro</div>
-        <input type="text" id="cedente" placeholder="Ex: Seara Alimentos">
-      </div>
-      <div class="f">
         <label>O boleto é emitido em nome de quem?</label>
         <div class="rc">
           <div class="rc-item" onclick="rc('boleto_nome','cedente',this)">Do cedente (credor original)</div>
@@ -263,6 +302,13 @@ input:checked + .sl:before { transform: translateX(19px); }
           <div class="rc-item" onclick="rc('regras_origem','cedente',this)">Do cedente (ele define as condições)</div>
           <div class="rc-item" onclick="rc('regras_origem','assessoria',this)">Da assessoria (autonomia própria)</div>
         </div>
+      </div>
+
+      <div class="f">
+        <label>Carteiras / cedentes</label>
+        <div class="hint">Adicione cada cedente com suas regras de negociação específicas</div>
+        <div id="carteiras-list"></div>
+        <button type="button" class="btn-add" onclick="addCarteira()">+ Adicionar carteira</button>
       </div>
     </div>
 
@@ -393,6 +439,26 @@ input:checked + .sl:before { transform: translateX(19px); }
     <div class="f">
       <div class="tog-row">
         <div class="tog-label">
+          <label>Tem verificação de CPF / CNPJ?</label>
+          <div class="hint">O cliente precisa informar o CPF/CNPJ para ver os dados da dívida</div>
+        </div>
+        <label class="sw"><input type="checkbox" id="verif_cpf" onchange="onVerifChange(this.checked)"><span class="sl"></span></label>
+      </div>
+      <div class="cond" id="cond_verif">
+        <div class="f">
+          <label>Valida contra qual campo da base?</label>
+          <div class="rc">
+            <div class="rc-item" onclick="rc('verif_campo','cpf',this); updateCPC()">CPF</div>
+            <div class="rc-item" onclick="rc('verif_campo','cnpj',this); updateCPC()">CNPJ</div>
+            <div class="rc-item" onclick="rc('verif_campo','ambos',this); updateCPC()">CPF ou CNPJ</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="f" id="bloco_cpc" style="display:none">
+      <div class="tog-row">
+        <div class="tog-label">
           <label>Tem CPC — Confirmação Positiva de Cliente?</label>
           <div class="hint">Verificar se quem respondeu é o titular antes de mostrar a dívida</div>
         </div>
@@ -401,28 +467,8 @@ input:checked + .sl:before { transform: translateX(19px); }
       <div class="cond" id="cond_cpc">
         <div class="f">
           <label>Como o CPC funciona?</label>
-          <div class="hint">Ex: "Você é o(a) [Nome]?" ou pergunta o CPF antes de continuar</div>
+          <div class="hint">Ex: "Você é o(a) [Nome]?" ou pede o CPF/CNPJ para confirmar</div>
           <textarea id="cpc_desc" placeholder="Descreva como confirmar a identidade do cliente..."></textarea>
-        </div>
-      </div>
-    </div>
-
-    <div class="f">
-      <div class="tog-row">
-        <div class="tog-label">
-          <label>Tem verificação de CPF / CNPJ?</label>
-          <div class="hint">O cliente precisa informar o CPF/CNPJ para ver os dados da dívida</div>
-        </div>
-        <label class="sw"><input type="checkbox" id="verif_cpf" onchange="toggleCond('cond_verif',this.checked)"><span class="sl"></span></label>
-      </div>
-      <div class="cond" id="cond_verif">
-        <div class="f">
-          <label>Valida contra qual campo da base?</label>
-          <div class="rc">
-            <div class="rc-item" onclick="rc('verif_campo','cpf',this)">CPF</div>
-            <div class="rc-item" onclick="rc('verif_campo','cnpj',this)">CNPJ</div>
-            <div class="rc-item" onclick="rc('verif_campo','ambos',this)">CPF ou CNPJ</div>
-          </div>
         </div>
       </div>
     </div>
@@ -1029,14 +1075,92 @@ function toggleCond(id, show) {
 }
 
 // ── Cedente flow ──────────────────────────────────
+// ── Cedente / carteira ─────────────────────────────
 function showCedente() {
   document.getElementById('cond_cedente').classList.add('on');
-  document.getElementById('bloco_carteira').style.display = 'block';
+  if (document.getElementById('carteiras-list').children.length === 0) addCarteira();
 }
 function hideCedente() {
   document.getElementById('cond_cedente').classList.remove('on');
-  document.getElementById('bloco_carteira').style.display = 'none';
 }
+
+let carteiraCount = 0;
+function addCarteira() {
+  carteiraCount++;
+  const idx = carteiraCount;
+  const div = document.createElement('div');
+  div.className = 'carteira-block';
+  div.id = `carteira-${idx}`;
+  div.innerHTML = `
+    <div class="carteira-header">
+      <span class="carteira-num">Carteira ${idx}</span>
+      ${idx > 1 ? `<button type="button" class="carteira-remove" onclick="removeCarteira(${idx})" title="Remover">✕</button>` : ''}
+    </div>
+    <div class="f">
+      <label>Nome do cedente / credor</label>
+      <input type="text" id="c${idx}_nome" placeholder="Ex: Seara Alimentos">
+    </div>
+    <div class="f">
+      <label>Produto / dívida desta carteira</label>
+      <input type="text" id="c${idx}_produto" placeholder="Ex: Notas fiscais de alimentos">
+    </div>
+    <div class="f">
+      <label>Regras de negociação específicas</label>
+      <div class="hint">Máx. parcelas, desconto, entrada, restrições desta carteira</div>
+      <textarea id="c${idx}_regras" rows="3" placeholder="Ex: Até 8x semanais, entrada de 30%, sem desconto à vista..."></textarea>
+    </div>
+    <div class="f">
+      <label>Perfil dos devedores desta carteira</label>
+      <div class="hint">Ex: PJ do setor alimentício, inadimplentes há 3–12 meses</div>
+      <input type="text" id="c${idx}_perfil" placeholder="Ex: Distribuidoras de alimentos, CNPJ ativo">
+    </div>
+  `;
+  document.getElementById('carteiras-list').appendChild(div);
+  injectObsFlags(div);
+}
+function removeCarteira(idx) {
+  const el = document.getElementById(`carteira-${idx}`);
+  if (el) el.remove();
+}
+
+// ── CPC condicional ────────────────────────────────
+function onVerifChange(checked) {
+  toggleCond('cond_verif', checked);
+  if (!checked) {
+    document.getElementById('bloco_cpc').style.display = 'none';
+    state.verif_campo = null;
+  }
+}
+function updateCPC() {
+  const campo = state.verif_campo;
+  const show = campo === 'cpf' || campo === 'cnpj' || campo === 'ambos';
+  document.getElementById('bloco_cpc').style.display = show ? 'block' : 'none';
+}
+
+// ── Obs flags ─────────────────────────────────────
+let obsCount = 0;
+function injectObsFlags(root) {
+  (root || document).querySelectorAll('.f:not(.obs-injected)').forEach(field => {
+    field.classList.add('obs-injected');
+    const id = 'obs_' + (++obsCount);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'obs-btn';
+    btn.innerHTML = '<span class="flag">🚩</span> observação';
+    btn.onclick = function() {
+      const area = this.nextElementSibling;
+      area.classList.toggle('on');
+      this.style.color = area.classList.contains('on') ? 'var(--accent2)' : '';
+    };
+    const area = document.createElement('div');
+    area.className = 'obs-area';
+    area.innerHTML = `<textarea id="${id}" placeholder="Observações adicionais sobre este campo..."></textarea>`;
+    field.appendChild(btn);
+    field.appendChild(area);
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => injectObsFlags());
 
 // ── GSheets flow ─────────────────────────────────
 function showGsheets() { document.getElementById('cond_gsheets').classList.add('on'); }
@@ -1073,6 +1197,30 @@ function drop(e) {
   if (file) setFile(file);
 }
 
+// ── Collect carteiras ──────────────────────────────
+function collectCarteiras() {
+  const list = [];
+  document.querySelectorAll('.carteira-block').forEach(block => {
+    const idx = block.id.replace('carteira-', '');
+    list.push({
+      nome: (document.getElementById(`c${idx}_nome`) || {}).value || null,
+      produto: (document.getElementById(`c${idx}_produto`) || {}).value || null,
+      regras: (document.getElementById(`c${idx}_regras`) || {}).value || null,
+      perfil: (document.getElementById(`c${idx}_perfil`) || {}).value || null,
+    });
+  });
+  return list;
+}
+
+// ── Collect obs ────────────────────────────────────
+function collectObs() {
+  const obs = {};
+  document.querySelectorAll('.obs-area.on textarea').forEach(ta => {
+    if (ta.value) obs[ta.id] = ta.value;
+  });
+  return Object.keys(obs).length ? obs : null;
+}
+
 // ── Collect ────────────────────────────────────────
 function g(id) {
   const el = document.getElementById(id);
@@ -1085,9 +1233,9 @@ function collect() {
     empresa: { nome: g('nome'), setor: g('setor'), tipo_devedor: state.devedor },
     tipo_cobranca: {
       modelo: state.tipo_cobranca,
-      cedente: g('cedente'),
       boleto_emitido_em: state.boleto_nome,
       regras_de: state.regras_origem,
+      carteiras: collectCarteiras(),
     },
     divida: {
       produto: g('produto'),
@@ -1176,7 +1324,8 @@ function collect() {
       objections: g('objections'),
       nao_revelar: g('nao_revelar'),
     },
-    meta: { preenchido_em: new Date().toLocaleString('pt-BR'), versao: '1.1' }
+    observacoes_gerais: collectObs(),
+    meta: { preenchido_em: new Date().toLocaleString('pt-BR'), versao: '1.2' }
   };
 }
 
